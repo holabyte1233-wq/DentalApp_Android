@@ -20,14 +20,21 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,10 +75,84 @@ fun PatientDetailsScreen(
     var isEditing by remember { mutableStateOf(false) }
     var name by remember(patient.id) { mutableStateOf(patient.name) }
     var age by remember(patient.id) { mutableStateOf(patient.age.toString()) }
+    var email by remember(patient.id) { mutableStateOf(patient.email) }
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var ageError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    var saveSucceeded by remember { mutableStateOf<Boolean?>(null) }
 
+    fun validate(): Boolean {
+        nameError = if (name.isBlank()) "Este campo es obligatorio" else null
+        ageError = if (age.isBlank()) "Este campo es obligatorio" else null
+        emailError = when {
+            email.isBlank() -> "Este campo es obligatorio"
+            !email.contains("@") -> "Introduce un email válido (debe contener @)"
+            else -> null
+        }
+        return nameError == null && ageError == null && emailError == null
+    }
+
+    fun onConfirmSave() {
+        isEditing = false
+        showConfirmDialog = false
+        saveSucceeded = true
+    }
+
+    LaunchedEffect(saveSucceeded) {
+        when (saveSucceeded) {
+            true -> {
+                snackbarHostState.showSnackbar(
+                    message = "✅ Datos guardados correctamente",
+                    duration = SnackbarDuration.Short
+                )
+                saveSucceeded = null
+            }
+            false -> {
+                snackbarHostState.showSnackbar(
+                    message = "❌ Error al guardar (comprueba la conexión)",
+                    duration = SnackbarDuration.Long
+                )
+                saveSucceeded = null
+            }
+            null -> {}
+        }
+    }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("¿Confirmar datos?") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Nombre: $name")
+                    Text("Email: $email")
+                    Text("Edad: $age años")
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onConfirmSave() }) {
+                    Text("Confirmar", color = RoyalBlue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirmDialog = false }) {
+                    Text("Corregir", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        containerColor = SystemGray6,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
+            .padding(paddingValues)
             .background(SystemGray6)
     ) {
         // Header: Atrás | Editar / Cancelar | Guardar
@@ -93,10 +174,15 @@ fun PatientDetailsScreen(
                 }
             } else {
                 Row {
-                    TextButton(onClick = { isEditing = false; name = patient.name; age = patient.age.toString() }) {
+                    TextButton(onClick = { isEditing = false; name = patient.name; age = patient.age.toString(); email = patient.email; nameError = null; ageError = null; emailError = null }) {
                         Text("Cancelar", color = TextSecondary)
                     }
-                    TextButton(onClick = { isEditing = false }) {
+                    TextButton(
+                        onClick = {
+                            if (!validate()) return@TextButton
+                            showConfirmDialog = true
+                        }
+                    ) {
                         Text("Guardar", color = RoyalBlue)
                     }
                 }
@@ -129,27 +215,55 @@ fun PatientDetailsScreen(
                 if (isEditing) {
                     OutlinedTextField(
                         value = name,
-                        onValueChange = { name = it },
+                        onValueChange = { name = it; nameError = null },
                         label = { Text("Nombre") },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp), tint = TextSecondary) },
+                        isError = nameError != null,
+                        supportingText = nameError?.let { { Text(it) } },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = SystemGray6,
-                            unfocusedContainerColor = SystemGray6
+                            unfocusedContainerColor = SystemGray6,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorSupportingTextColor = MaterialTheme.colorScheme.error
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
                         value = age,
-                        onValueChange = { age = it.filter { c -> c.isDigit() } },
+                        onValueChange = { age = it.filter { c -> c.isDigit() }.take(3); ageError = null },
                         label = { Text("Edad") },
+                        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(20.dp), tint = TextSecondary) },
+                        isError = ageError != null,
+                        supportingText = ageError?.let { { Text(it) } },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = SystemGray6,
-                            unfocusedContainerColor = SystemGray6
+                            unfocusedContainerColor = SystemGray6,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorSupportingTextColor = MaterialTheme.colorScheme.error
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it; emailError = null },
+                        label = { Text("Email") },
+                        leadingIcon = { Icon(Icons.Default.Mail, contentDescription = null, modifier = Modifier.size(20.dp), tint = TextSecondary) },
+                        isError = emailError != null,
+                        supportingText = emailError?.let { { Text(it) } },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SystemGray6,
+                            unfocusedContainerColor = SystemGray6,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorSupportingTextColor = MaterialTheme.colorScheme.error
                         )
                     )
                 } else {
@@ -179,7 +293,7 @@ fun PatientDetailsScreen(
                 ) {
                     Icon(Icons.Default.Mail, contentDescription = null, modifier = Modifier.size(20.dp), tint = TextSecondary)
                     Spacer(modifier = Modifier.size(8.dp))
-                    Text(patient.email, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Text(email, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -254,13 +368,14 @@ fun PatientDetailsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Transparent, SystemGray6, SystemGray6)))
-                .padding(20.dp)
+                .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
             androidx.compose.material3.Button(
                 onClick = onNewSimulation,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .padding(horizontal = 4.dp),
                 shape = RoundedCornerShape(24.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = Color.Black
@@ -269,6 +384,7 @@ fun PatientDetailsScreen(
                 Text("Nueva Simulación", color = Color.White)
             }
         }
+    }
     }
 }
 
