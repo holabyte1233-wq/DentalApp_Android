@@ -1,6 +1,7 @@
 [versions]
 agp = "8.9.2"
 kotlin = "2.0.21"
+ksp = "2.0.21-1.0.28"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -10,10 +11,11 @@ activityCompose = "1.12.3"
 composeBom = "2024.09.00"
 navigationCompose = "2.8.4"
 coil = "2.5.0"
- hilt = "2.56.2"
- hiltNavigationCompose = "1.2.0"
- supabase = "3.3.0"
- ktor = "3.2.0"
+hilt = "2.56.2"
+hiltNavigationCompose = "1.2.0"
+supabase = "3.0.0"
+ktor = "3.0.0"
+generativeAi = "0.9.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -40,13 +42,16 @@ androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navig
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-core = { group = "io.github.jan-tennert.supabase", name = "supabase-kt" }
 supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
+supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-kt" }
+supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
+google-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeAi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 

@@ -1,4 +1,3 @@
-import com.android.build.gradle.internal.cxx.configure.gradleLocalProperties
 import java.util.Properties
 
 
@@ -6,7 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt.android)
 }
@@ -29,8 +28,15 @@ android {
             properties.load(localPropertiesFile.inputStream())
         }
 
-        buildConfigField("String", "SUPABASE_URL", "\"${properties.getProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_KEY", "\"${properties.getProperty("SUPABASE_KEY") ?: ""}\"")
+        fun cleanProp(name: String): String {
+            return (properties.getProperty(name) ?: "")
+                .trim()
+                .removeSurrounding("\"")
+        }
+
+        buildConfigField("String", "SUPABASE_URL", "\"${cleanProp("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_KEY", "\"${cleanProp("SUPABASE_KEY")}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${cleanProp("GEMINI_API_KEY")}\"")
 
 
     }
@@ -73,13 +79,17 @@ dependencies {
     implementation(libs.coil.compose)
 
     implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.core)
     implementation(libs.supabase.auth)
+    implementation(libs.supabase.storage)
+    implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.okhttp)
+
+    implementation(libs.google.generativeai)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
