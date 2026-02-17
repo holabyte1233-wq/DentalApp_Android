@@ -21,16 +21,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,7 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
-import unab.edu.co.abrahamcaceres.dentalapp_android.data.mockPatients
+import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.dashboard.DashboardUiState
+import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.dashboard.DashboardViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.components.ClockDisplay
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.components.GlassmorphicHeader
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
@@ -57,12 +59,14 @@ fun DashboardScreen(
     modifier: Modifier = Modifier,
     onLogout: () -> Unit,
     onPatientClick: (String) -> Unit,
-    onNewDesign: () -> Unit
+    onNewDesign: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     val isWide = LocalConfiguration.current.screenWidthDp >= 600
 
     Column(modifier = modifier.fillMaxSize().background(SystemGray6)) {
-        GlassmorphicHeader(title = "DentalTech", onLogout = onLogout)
+        GlassmorphicHeader(title = "DentalTech", onLogout = { viewModel.signOut(onLogout) })
 
         Column(
             modifier = Modifier
@@ -79,19 +83,62 @@ fun DashboardScreen(
                 ClockDisplay(fontSize = 56.sp, lightWeight = true)
             }
 
-            LazyColumn(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                contentPadding = PaddingValues(bottom = 100.dp)
-            ) {
-                items(mockPatients) { patient ->
-                    PatientCard(
-                        patient = patient,
-                        onClick = { onPatientClick(patient.id) },
-                        onRecordsClick = { /* open records */ }
-                    )
+            when (val state = uiState) {
+                is DashboardUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                    }
+                }
+                is DashboardUiState.Error -> {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = state.message,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            androidx.compose.material3.TextButton(
+                                onClick = { viewModel.loadPatients() }
+                            ) {
+                                Text("Reintentar")
+                            }
+                        }
+                    }
+                }
+                is DashboardUiState.Success -> {
+                    if (state.patients.isEmpty()) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No hay pacientes registrados",
+                                color = TextSecondary
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(bottom = 100.dp)
+                        ) {
+                            items(state.patients) { patient ->
+                                PatientCard(
+                                    patient = patient,
+                                    onClick = { onPatientClick(patient.id) },
+                                    onRecordsClick = { /* open records */ }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -136,8 +183,9 @@ private fun PatientCard(
     onRecordsClick: () -> Unit
 ) {
     val lastVisitFormatted = try {
-        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale("es", "ES")).parse(patient.lastVisit)
-        parsed?.let { SimpleDateFormat("d MMM yyyy", Locale("es", "ES")).format(it) } ?: patient.lastVisit
+        val esLocale = Locale.forLanguageTag("es-ES")
+        val parsed = SimpleDateFormat("yyyy-MM-dd", esLocale).parse(patient.lastVisit)
+        parsed?.let { SimpleDateFormat("d MMM yyyy", esLocale).format(it) } ?: patient.lastVisit
     } catch (_: Exception) {
         patient.lastVisit
     }
@@ -160,7 +208,7 @@ private fun PatientCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = patient.avatar,
+            model = patient.fotoUrl?.takeIf { it.isNotBlank() } ?: patient.avatar.ifBlank { null },
             contentDescription = null,
             modifier = Modifier
                 .size(64.dp)
@@ -190,7 +238,7 @@ private fun PatientCard(
                 .background(SystemGray6)
         ) {
             Icon(
-                Icons.Default.Phone,
+                Icons.Default.Description,
                 contentDescription = "Expediente",
                 modifier = Modifier.size(20.dp),
                 tint = TextSecondary

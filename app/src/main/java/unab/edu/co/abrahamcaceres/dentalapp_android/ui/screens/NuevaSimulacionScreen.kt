@@ -1,5 +1,8 @@
 package unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,7 +28,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,37 +47,140 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import unab.edu.co.abrahamcaceres.dentalapp_android.R
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
+import java.io.File
+import java.io.FileOutputStream
 
 private const val HOLD_DURATION_MS = 2000L
 
 @Composable
 fun NuevaSimulacionScreen(
-    initialPatientName: String? = null,
-    initialAge: String? = null,
     modifier: Modifier = Modifier,
+    isGeminiActive: Boolean = false,
     onCancel: () -> Unit,
-    onHoldComplete: () -> Unit
+    onStartProcessing: (name: String, age: String, photoUri: Uri, manualDescription: String) -> Unit
 ) {
-    var patientName by remember { mutableStateOf(initialPatientName ?: "") }
-    var age by remember { mutableStateOf(initialAge ?: "") }
+    val context = LocalContext.current
+    var patientName by remember { mutableStateOf("") }
+    var age by remember { mutableStateOf("") }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var manualDescription by remember { mutableStateOf("") }
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var ageError by remember { mutableStateOf<String?>(null) }
+    var photoError by remember { mutableStateOf<String?>(null) }
+
+    fun validateFields(): Boolean {
+        var valid = true
+        nameError = if (patientName.isBlank()) {
+            valid = false
+            "El nombre es obligatorio"
+        } else null
+        val ageNum = age.toIntOrNull()
+        ageError = when {
+            age.isBlank() -> {
+                valid = false
+                "La edad es obligatoria"
+            }
+            ageNum == null || ageNum !in 1..120 -> {
+                valid = false
+                "Edad debe estar entre 1 y 120"
+            }
+            else -> null
+        }
+        photoError = if (photoUri == null) {
+            valid = false
+            "Se requiere una fotografía dental"
+        } else null
+        return valid
+    }
+
+    val allFieldsValid = patientName.isNotBlank() &&
+        age.toIntOrNull() in 1..120 &&
+        photoUri != null
     var progress by remember { mutableStateOf(0f) }
     val progressAnim = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
 
-    val launcher = rememberLauncherForActivityResult(
+    // Camera URI for TakePicture
+    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    fun createTempPhotoUri(): Uri {
+        val photoFile = File.createTempFile("dental_photo_", ".jpg", context.cacheDir)
+        return FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            photoFile
+        )
+    }
+
+    // Gallery launcher
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri -> photoUri = uri }
+    ) { uri -> if (uri != null) { photoUri = uri; photoError = null } }
+
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success -> if (success) { photoUri = cameraUri; photoError = null } }
+
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = createTempPhotoUri()
+            cameraUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
+    fun launchCamera() {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            val uri = createTempPhotoUri()
+            cameraUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    fun useSampleImage() {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.ic_sample_dental)
+            ?: return
+        val bitmap = Bitmap.createBitmap(800, 600, Bitmap.Config.ARGB_8888)
+        android.graphics.Canvas(bitmap).let { canvas ->
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+        }
+        val file = File(context.cacheDir, "sample_dental.jpg")
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        photoUri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        photoError = null
+    }
 
     LaunchedEffect(progressAnim.value) {
         progress = progressAnim.value
@@ -125,16 +233,22 @@ fun NuevaSimulacionScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = patientName,
-                    onValueChange = { patientName = it },
+                    onValueChange = {
+                        patientName = it
+                        nameError = null
+                    },
                     placeholder = { Text("Ingrese nombre completo", color = TextSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    isError = nameError != null,
+                    supportingText = nameError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = SystemGray6,
                         unfocusedContainerColor = SystemGray6,
                         focusedBorderColor = MaterialTheme.colorScheme.outline,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        errorBorderColor = MaterialTheme.colorScheme.error
                     )
                 )
             }
@@ -157,21 +271,67 @@ fun NuevaSimulacionScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = age,
-                    onValueChange = { age = it.filter { c -> c.isDigit() }.take(3) },
-                    placeholder = { Text("Ingrese edad", color = TextSecondary) },
+                    onValueChange = {
+                        age = it.filter { c -> c.isDigit() }.take(3)
+                        ageError = null
+                    },
+                    placeholder = { Text("Ingrese edad (1-120)", color = TextSecondary) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
+                    isError = ageError != null,
+                    supportingText = ageError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = SystemGray6,
                         unfocusedContainerColor = SystemGray6,
                         focusedBorderColor = MaterialTheme.colorScheme.outline,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        errorBorderColor = MaterialTheme.colorScheme.error
                     )
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Manual description (when Gemini not active)
+            if (!isGeminiActive) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = "Descripción / Notas (opcional)",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Cuando la IA no está activa, puedes añadir la descripción del tratamiento manualmente.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = manualDescription,
+                        onValueChange = { manualDescription = it },
+                        placeholder = { Text("Ej: Diseño de sonrisa con carillas, blanqueamiento B1...", color = TextSecondary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SystemGray6,
+                            unfocusedContainerColor = SystemGray6,
+                            focusedBorderColor = MaterialTheme.colorScheme.outline,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
             // Fotografía Dental card
             Column(
@@ -186,6 +346,14 @@ fun NuevaSimulacionScreen(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (photoError != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = photoError!!,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 Spacer(modifier = Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
@@ -196,10 +364,7 @@ fun NuevaSimulacionScreen(
                             width = 2.dp,
                             color = TextSecondary.copy(alpha = 0.5f),
                             shape = RoundedCornerShape(12.dp)
-                        )
-                        .pointerInput(Unit) {
-                            detectTapGestures(onTap = { launcher.launch("image/*") })
-                        },
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     if (photoUri != null) {
@@ -215,18 +380,48 @@ fun NuevaSimulacionScreen(
                             verticalArrangement = Arrangement.Center
                         ) {
                             Icon(
-                                Icons.Default.AccountCircle,
+                                Icons.Default.AddPhotoAlternate,
                                 contentDescription = null,
                                 modifier = Modifier.size(40.dp),
                                 tint = TextSecondary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Toca para subir foto",
+                                text = "Selecciona una opción abajo",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = TextSecondary
                             )
                         }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TextButton(
+                        onClick = { launchCamera() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp), tint = RoyalBlue)
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Text("Cámara", color = RoyalBlue)
+                    }
+                    TextButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(18.dp), tint = RoyalBlue)
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Text("Galería", color = RoyalBlue)
+                    }
+                    TextButton(
+                        onClick = { useSampleImage() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp), tint = RoyalBlue)
+                        Spacer(modifier = Modifier.size(4.dp))
+                        Text("Demo", color = RoyalBlue)
                     }
                 }
             }
@@ -234,7 +429,7 @@ fun NuevaSimulacionScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text = "Mantén presionado para capturar",
+                text = "Mantén presionado para iniciar",
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
@@ -247,9 +442,13 @@ fun NuevaSimulacionScreen(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .size(128.dp)
-                    .pointerInput(Unit) {
+                    .pointerInput(allFieldsValid) {
                         detectTapGestures(
                             onPress = {
+                                if (!allFieldsValid) {
+                                    validateFields()
+                                    return@detectTapGestures
+                                }
                                 val job = scope.launch {
                                     progressAnim.snapTo(0f)
                                     progressAnim.animateTo(
@@ -257,7 +456,9 @@ fun NuevaSimulacionScreen(
                                         animationSpec = tween(HOLD_DURATION_MS.toInt())
                                     )
                                     if (progressAnim.value >= 1f) {
-                                        onHoldComplete()
+                                        photoUri?.let { uri ->
+                                            onStartProcessing(patientName, age, uri, manualDescription)
+                                        }
                                     }
                                 }
                                 tryAwaitRelease()
@@ -267,10 +468,11 @@ fun NuevaSimulacionScreen(
                         )
                     }
             ) {
+                val buttonEnabled = allFieldsValid
                 Canvas(Modifier.fillMaxSize()) {
                     val strokeWidth = 6.dp.toPx()
                     drawArc(
-                        color = RoyalBlue,
+                        color = if (buttonEnabled) RoyalBlue else Color.Gray,
                         startAngle = -90f,
                         sweepAngle = 360f * progress,
                         useCenter = false,
@@ -281,16 +483,31 @@ fun NuevaSimulacionScreen(
                     modifier = Modifier
                         .size(104.dp)
                         .clip(CircleShape)
-                        .background(androidx.compose.ui.graphics.Color.Black),
+                        .background(if (buttonEnabled) Color.Black else Color.DarkGray),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.CameraAlt,
-                        contentDescription = "Capturar",
+                        contentDescription = "Iniciar procesamiento",
                         modifier = Modifier.size(48.dp),
-                        tint = androidx.compose.ui.graphics.Color.White
+                        tint = Color.White
                     )
                 }
+            }
+
+            if (!allFieldsValid) {
+                Spacer(modifier = Modifier.height(8.dp))
+                val missing = mutableListOf<String>().apply {
+                    if (patientName.isBlank()) add("Nombre")
+                    if (age.isBlank() || age.toIntOrNull() !in 1..120) add("Edad (1-120)")
+                    if (photoUri == null) add("Fotografía")
+                }
+                Text(
+                    text = if (missing.isEmpty()) "" else "Completa: ${missing.joinToString(", ")}",
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
 
             Spacer(modifier = Modifier.height(48.dp))

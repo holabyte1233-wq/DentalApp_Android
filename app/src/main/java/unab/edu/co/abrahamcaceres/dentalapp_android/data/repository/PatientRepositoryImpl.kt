@@ -7,6 +7,7 @@ import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
 import unab.edu.co.abrahamcaceres.dentalapp_android.domain.repository.PatientRepository
 
 @Serializable
@@ -19,7 +20,7 @@ class PatientRepositoryImpl @Inject constructor(
     override suspend fun checkPatientExists(email: String, cedula: String): Boolean =
         withContext(Dispatchers.IO) {
             try {
-                val list = supabaseClient.from("pacientes").select(Columns.list("id")) {
+                val list = supabaseClient.from("patients").select(Columns.list("id")) {
                     filter {
                         or {
                             eq("email", email)
@@ -31,6 +32,23 @@ class PatientRepositoryImpl @Inject constructor(
                 list.isNotEmpty()
             } catch (e: Exception) {
                 throw e
+            }
+        }
+
+    override suspend fun getPatients(): List<Patient> =
+        withContext(Dispatchers.IO) {
+            supabaseClient.from("patients").select().decodeList<Patient>()
+        }
+
+    override suspend fun getPatientById(patientId: String): Patient? =
+        withContext(Dispatchers.IO) {
+            try {
+                supabaseClient.from("patients").select {
+                    filter { eq("id", patientId) }
+                    limit(count = 1)
+                }.decodeList<Patient>().firstOrNull()
+            } catch (_: Exception) {
+                null
             }
         }
 }

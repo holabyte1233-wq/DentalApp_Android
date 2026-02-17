@@ -1,7 +1,7 @@
 package unab.edu.co.abrahamcaceres.dentalapp_android.data.repository
 
 import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.storage.storage
 import javax.inject.Inject
@@ -10,12 +10,13 @@ import kotlinx.coroutines.withContext
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
 
 class SmileRepositoryImpl @Inject constructor(
-    private val supabaseClient: SupabaseClient
+    private val supabaseClient: SupabaseClient,
+    private val auth: Auth
 ) {
 
     suspend fun uploadOriginalPhoto(photoBytes: ByteArray, patientId: String): String =
         withContext(Dispatchers.IO) {
-            val userId = supabaseClient.auth.currentUserOrNull()?.id
+            val userId = auth.currentUserOrNull()?.id
                 ?: throw IllegalStateException("User not logged in")
 
             val filePath = "$userId/$patientId/original.jpg"
@@ -37,7 +38,7 @@ class SmileRepositoryImpl @Inject constructor(
             try {
                 val patientToSave = patient.copy(fotoUrl = photoUrl)
 
-                supabaseClient.from("pacientes").insert(patientToSave)
+                supabaseClient.from("patients").insert(patientToSave)
 
                 Result.success(true)
             } catch (e: Exception) {
@@ -49,7 +50,7 @@ class SmileRepositoryImpl @Inject constructor(
     suspend fun saveDesignToExpediente(patientId: String, designImageUrl: String): Result<Unit> =
         withContext(Dispatchers.IO) {
             try {
-                val userId = supabaseClient.auth.currentUserOrNull()?.id
+                val userId = auth.currentUserOrNull()?.id
                     ?: throw IllegalStateException("User not logged in")
                 supabaseClient.from("diseños").insert(
                     mapOf(

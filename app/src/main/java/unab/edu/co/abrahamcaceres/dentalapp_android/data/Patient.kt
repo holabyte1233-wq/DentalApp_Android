@@ -7,10 +7,11 @@ import kotlinx.serialization.Transient
 @Serializable
 data class Patient(
     val id: String,
+    @SerialName("full_name")
     val name: String,
-    val age: Int,
-    val phone: String,
-    val email: String,
+    val age: Int = 0,
+    val phone: String = "",
+    val email: String = "",
     @SerialName("foto_url")
     val fotoUrl: String? = null,
     @Transient

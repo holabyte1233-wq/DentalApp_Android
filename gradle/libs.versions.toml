@@ -13,9 +13,10 @@ navigationCompose = "2.8.4"
 coil = "2.5.0"
 hilt = "2.56.2"
 hiltNavigationCompose = "1.2.0"
-supabase = "3.0.0"
+supabase = "3.0.3"
 ktor = "3.0.0"
 generativeAi = "0.9.0"
+securityCrypto = "1.1.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -46,6 +47,7 @@ supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-k
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt" }
 ktor-client-okhttp = { group = "io.ktor", name = "ktor-client-okhttp", version.ref = "ktor" }
 google-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "generativeAi" }
+androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

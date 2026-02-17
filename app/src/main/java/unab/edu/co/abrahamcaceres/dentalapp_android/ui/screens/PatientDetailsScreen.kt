@@ -33,8 +33,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,9 +48,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import coil.compose.AsyncImage
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.TreatmentRecord
+import unab.edu.co.abrahamcaceres.dentalapp_android.domain.repository.PatientRepository
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.DestructiveRed
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.StatusGreen
@@ -58,19 +70,65 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+sealed interface PatientDetailState {
+    data object Loading : PatientDetailState
+    data class Loaded(val patient: Patient) : PatientDetailState
+    data class NotFound(val message: String = "Paciente no encontrado") : PatientDetailState
+}
+
+@HiltViewModel
+class PatientDetailViewModel @Inject constructor(
+    private val patientRepository: PatientRepository
+) : ViewModel() {
+    private val _state = MutableStateFlow<PatientDetailState>(PatientDetailState.Loading)
+    val state: StateFlow<PatientDetailState> = _state.asStateFlow()
+
+    fun loadPatient(patientId: String) {
+        viewModelScope.launch {
+            _state.value = PatientDetailState.Loading
+            val patient = patientRepository.getPatientById(patientId)
+            _state.value = if (patient != null) {
+                PatientDetailState.Loaded(patient)
+            } else {
+                PatientDetailState.NotFound()
+            }
+        }
+    }
+}
+
 @Composable
 fun PatientDetailsScreen(
-    patient: Patient?,
+    patientId: String?,
     modifier: Modifier = Modifier,
     onBack: () -> Unit,
-    onNewSimulation: () -> Unit
+    onNewSimulation: () -> Unit,
+    viewModel: PatientDetailViewModel = hiltViewModel()
 ) {
-    if (patient == null) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Paciente no encontrado")
+    val detailState by viewModel.state.collectAsState()
+
+    LaunchedEffect(patientId) {
+        if (patientId != null) {
+            viewModel.loadPatient(patientId)
         }
-        return
     }
+
+    when (val s = detailState) {
+        is PatientDetailState.Loading -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return
+        }
+        is PatientDetailState.NotFound -> {
+            Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(s.message)
+            }
+            return
+        }
+        is PatientDetailState.Loaded -> {}
+    }
+
+    val patient = (detailState as PatientDetailState.Loaded).patient
 
     var isEditing by remember { mutableStateOf(false) }
     var name by remember(patient.id) { mutableStateOf(patient.name) }
@@ -204,7 +262,7 @@ fun PatientDetailsScreen(
                     .padding(24.dp)
             ) {
                 AsyncImage(
-                    model = patient.avatar,
+                    model = patient.fotoUrl?.takeIf { it.isNotBlank() } ?: patient.avatar.ifBlank { null },
                     contentDescription = null,
                     modifier = Modifier
                         .size(80.dp)
@@ -302,8 +360,9 @@ fun PatientDetailsScreen(
                     Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(20.dp), tint = TextSecondary)
                     Spacer(modifier = Modifier.size(8.dp))
                     val lastVisitFormatted = try {
-                        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale("es", "ES")).parse(patient.lastVisit)
-                        parsed?.let { SimpleDateFormat("d MMM yyyy", Locale("es", "ES")).format(it) } ?: patient.lastVisit
+                        val esLocale = Locale.forLanguageTag("es-ES")
+                        val parsed = SimpleDateFormat("yyyy-MM-dd", esLocale).parse(patient.lastVisit)
+                        parsed?.let { SimpleDateFormat("d MMM yyyy", esLocale).format(it) } ?: patient.lastVisit
                     } catch (_: Exception) {
                         patient.lastVisit
                     }

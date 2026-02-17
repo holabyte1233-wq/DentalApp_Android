@@ -2,8 +2,6 @@ package unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +10,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -19,8 +22,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,23 +46,84 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import kotlin.math.roundToInt
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.SimulationResult
-import unab.edu.co.abrahamcaceres.dentalapp_android.data.defaultSimulationResult
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
 import androidx.compose.ui.graphics.Color
 
+data class SharePreviewData(
+    val patientName: String?,
+    val treatmentName: String,
+    val description: String,
+    val beforeImageUrl: String,
+    val afterImageUrl: String,
+    val expectedDuration: String,
+    val estimatedCost: String
+)
+
 @Composable
 fun ResultScreen(
+    modifier: Modifier = Modifier,
     result: SimulationResult?,
     patientName: String? = null,
-    modifier: Modifier = Modifier,
+    errorMessage: String? = null,
     onBack: () -> Unit,
-    onShare: () -> Unit,
-    onSaveResult: () -> Unit,
+    onShare: (previewData: SharePreviewData) -> Unit,
+    onSaveResult: (finalDescription: String) -> Unit,
     onDiscard: () -> Unit
 ) {
-    val data = result ?: defaultSimulationResult
+    if (result == null) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(SystemGray6),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = errorMessage ?: "No se pudo generar el resultado",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            TextButton(onClick = onBack) {
+                Text("Volver", color = RoyalBlue)
+            }
+        }
+        return
+    }
+
+    val data = result
+    var editableDescription by remember(data) { mutableStateOf(data.description) }
+    var showSharePreview by remember { mutableStateOf(false) }
+
+    if (showSharePreview) {
+        SharePreviewDialog(
+            previewData = SharePreviewData(
+                patientName = patientName,
+                treatmentName = data.treatmentName,
+                description = editableDescription,
+                beforeImageUrl = data.beforeImageUrl,
+                afterImageUrl = data.afterImageUrl,
+                expectedDuration = data.expectedDuration,
+                estimatedCost = data.estimatedCost
+            ),
+            onDismiss = { showSharePreview = false },
+            onShare = {
+                onShare(SharePreviewData(
+                    patientName = patientName,
+                    treatmentName = data.treatmentName,
+                    description = editableDescription,
+                    beforeImageUrl = data.beforeImageUrl,
+                    afterImageUrl = data.afterImageUrl,
+                    expectedDuration = data.expectedDuration,
+                    estimatedCost = data.estimatedCost
+                ))
+                showSharePreview = false
+            }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -75,7 +142,9 @@ fun ResultScreen(
                 Spacer(modifier = Modifier.size(4.dp))
                 Text("Atrás", color = RoyalBlue)
             }
-            TextButton(onClick = onShare) {
+            TextButton(onClick = { showSharePreview = true }) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp), tint = RoyalBlue)
+                Spacer(modifier = Modifier.size(4.dp))
                 Text("Compartir", color = RoyalBlue)
             }
         }
@@ -125,7 +194,7 @@ fun ResultScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Recommendation card
+        // Recommendation card - editable description for doctor approval
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -141,9 +210,24 @@ fun ResultScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = data.description,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Descripción (el doctor puede editar antes de guardar)",
+                style = MaterialTheme.typography.labelMedium,
                 color = TextSecondary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            OutlinedTextField(
+                value = editableDescription,
+                onValueChange = { editableDescription = it },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                maxLines = 6,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = RoyalBlue,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                )
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -168,7 +252,7 @@ fun ResultScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             androidx.compose.material3.Button(
-                onClick = onSaveResult,
+                onClick = { onSaveResult(editableDescription) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -294,4 +378,82 @@ private fun BeforeAfterSlider(
             }
         }
     }
+}
+
+@Composable
+private fun SharePreviewDialog(
+    previewData: SharePreviewData,
+    onDismiss: () -> Unit,
+    onShare: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Vista previa para compartir") },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                previewData.patientName?.let { name ->
+                    Text(
+                        text = "Paciente: $name",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Text(
+                    text = previewData.treatmentName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = previewData.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AsyncImage(
+                        model = previewData.beforeImageUrl,
+                        contentDescription = "Antes",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(80.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    AsyncImage(
+                        model = previewData.afterImageUrl,
+                        contentDescription = "Después",
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(80.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                Text(
+                    text = "Duración: ${previewData.expectedDuration} · Coste: ${previewData.estimatedCost}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onShare) {
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = RoyalBlue)
+                Spacer(modifier = Modifier.size(4.dp))
+                Text("Compartir", color = RoyalBlue)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cerrar", color = TextSecondary)
+            }
+        }
+    )
 }

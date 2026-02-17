@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="400dp"
+    android:height="300dp"
+    android:viewportWidth="400"
+    android:viewportHeight="300">
+    <!-- Light background (teeth color) - brighter -->
+    <path
+        android:fillColor="#FFFEF8"
+        android:pathData="M50,100 L350,100 L350,250 L50,250 Z" />
+    <!-- Simple smile arc -->
+    <path
+        android:fillColor="#E8D8D0"
+        android:strokeWidth="2"
+        android:strokeColor="#C0B0A0"
+        android:pathData="M80,180 Q200,260 320,180" />
+    <!-- Tooth outlines - whiter (B1 shade simulation) -->
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M100,110 L130,110 L130,170 L100,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M135,110 L165,110 L165,170 L135,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M170,110 L200,110 L200,170 L170,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M205,110 L235,110 L235,170 L205,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M240,110 L270,110 L270,170 L240,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M275,110 L305,110 L305,170 L275,170 Z" />
+    <path
+        android:fillColor="#FFFFFE"
+        android:strokeWidth="1"
+        android:strokeColor="#E8E4E0"
+        android:pathData="M310,110 L340,110 L340,170 L310,170 Z" />
+</vector>

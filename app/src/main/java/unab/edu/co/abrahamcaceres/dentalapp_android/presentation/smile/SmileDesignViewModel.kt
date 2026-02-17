@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
-import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.GeminiService
+import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.SmileAnalyzer
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.repository.SmileRepositoryImpl
 import unab.edu.co.abrahamcaceres.dentalapp_android.domain.repository.PatientRepository
 
@@ -36,7 +36,7 @@ sealed interface SaveDesignState {
 class SmileDesignViewModel @Inject constructor(
     private val smileRepository: SmileRepositoryImpl,
     private val patientRepository: PatientRepository,
-    private val geminiService: GeminiService
+    private val smileAnalyzer: SmileAnalyzer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SmileUiState>(SmileUiState.Idle)
@@ -69,7 +69,7 @@ class SmileDesignViewModel @Inject constructor(
                 val patientId = UUID.randomUUID().toString()
 
                 val photoBytes = withContext(Dispatchers.Default) {
-                    bitmapToJpegByteArray(bitmap, quality = 80)
+                    bitmapToJpegByteArray(bitmap)
                 }
 
                 val photoUrl = smileRepository.uploadOriginalPhoto(
@@ -92,7 +92,7 @@ class SmileDesignViewModel @Inject constructor(
                         ?: IllegalStateException("No se pudo guardar el perfil del paciente")
                 }
 
-                val generatedImage = geminiService.generateSmile(bitmap)
+                val generatedImage = smileAnalyzer.analyzeSmile(bitmap)
 
                 _uiState.value = SmileUiState.Success(generatedImage)
             } catch (e: Exception) {
@@ -128,9 +128,9 @@ class SmileDesignViewModel @Inject constructor(
         _saveState.value = SaveDesignState.Idle
     }
 
-    private fun bitmapToJpegByteArray(bitmap: Bitmap, quality: Int): ByteArray {
+    private fun bitmapToJpegByteArray(bitmap: Bitmap): ByteArray {
         val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
         return outputStream.toByteArray()
     }
 }
