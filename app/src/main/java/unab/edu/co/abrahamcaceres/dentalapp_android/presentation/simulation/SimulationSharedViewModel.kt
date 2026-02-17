@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.SimulationResult
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.SmileAnalyzer
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.repository.SmileRepositoryImpl
@@ -24,8 +25,20 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.data.repository.SmileReposit
 sealed interface SimulationState {
     data object Idle : SimulationState
     data object Processing : SimulationState
-    data class Success(val result: SimulationResult, val patientName: String) : SimulationState
+    data class Success(
+        val result: SimulationResult,
+        val patientName: String,
+        val patientId: String,
+        val patientAge: String
+    ) : SimulationState
     data class Error(val message: String) : SimulationState
+}
+
+sealed interface SaveSimulationState {
+    data object Idle : SaveSimulationState
+    data object Saving : SaveSimulationState
+    data object Success : SaveSimulationState
+    data class Error(val message: String) : SaveSimulationState
 }
 
 @HiltViewModel
@@ -38,6 +51,9 @@ class SimulationSharedViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<SimulationState>(SimulationState.Idle)
     val state: StateFlow<SimulationState> = _state.asStateFlow()
+
+    private val _saveState = MutableStateFlow<SaveSimulationState>(SaveSimulationState.Idle)
+    val saveState: StateFlow<SaveSimulationState> = _saveState.asStateFlow()
 
     var patientName: String = ""
         private set
@@ -112,7 +128,9 @@ class SimulationSharedViewModel @Inject constructor(
 
                 _state.value = SimulationState.Success(
                     result = result,
-                    patientName = patientName
+                    patientName = patientName,
+                    patientId = patientId,
+                    patientAge = patientAge
                 )
             } catch (e: Exception) {
                 _state.value = SimulationState.Error(
@@ -126,10 +144,55 @@ class SimulationSharedViewModel @Inject constructor(
         _state.value = when (val s = _state.value) {
             is SimulationState.Success -> SimulationState.Success(
                 result = s.result.copy(description = newDescription),
-                patientName = s.patientName
+                patientName = s.patientName,
+                patientId = s.patientId,
+                patientAge = s.patientAge
             )
             else -> s
         }
+    }
+
+    fun saveSimulationResult(finalDescription: String) {
+        val successState = _state.value as? SimulationState.Success ?: return
+        viewModelScope.launch {
+            _saveState.value = SaveSimulationState.Saving
+            try {
+                val patient = Patient(
+                    id = successState.patientId,
+                    name = successState.patientName,
+                    age = successState.patientAge.toIntOrNull() ?: 0,
+                    phone = "",
+                    email = "",
+                    fotoUrl = successState.result.beforeImageUrl
+                )
+                val savePatientResult = smileRepository.savePatientProfile(patient, successState.result.beforeImageUrl)
+                if (savePatientResult.isFailure) {
+                    throw savePatientResult.exceptionOrNull() ?: IllegalStateException("No se pudo guardar el paciente")
+                }
+                val designImageUrl = if (successState.result.afterImageUrl.startsWith("android.resource")) {
+                    successState.result.beforeImageUrl
+                } else {
+                    successState.result.afterImageUrl
+                }
+                val saveDesignResult = smileRepository.saveDesignToExpediente(
+                    patientId = successState.patientId,
+                    designImageUrl = designImageUrl,
+                    description = finalDescription
+                )
+                if (saveDesignResult.isFailure) {
+                    throw saveDesignResult.exceptionOrNull() ?: IllegalStateException("No se pudo guardar el diseño")
+                }
+                _saveState.value = SaveSimulationState.Success
+            } catch (e: Exception) {
+                _saveState.value = SaveSimulationState.Error(
+                    e.message ?: "Error al guardar"
+                )
+            }
+        }
+    }
+
+    fun clearSaveState() {
+        _saveState.value = SaveSimulationState.Idle
     }
 
     fun reset() {

@@ -51,4 +51,7 @@ class DashboardViewModel @Inject constructor(
             }
         }
     }
+
+    /** Recarga la lista manualmente (p. ej. al volver de crear un diseño). */
+    fun refresh() = loadPatients()
 }

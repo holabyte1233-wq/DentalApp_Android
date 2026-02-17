@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -15,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation.SaveSimulationState
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation.SimulationSharedViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation.SimulationState
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.DashboardScreen
@@ -33,7 +35,13 @@ sealed class Screen(val route: String) {
     data object SimulationFlow : Screen("simulation_flow")
     data object NuevaSimulacion : Screen("nueva_simulacion")
     data object Processing : Screen("processing")
-    data object Result : Screen("result")
+    data object Result : Screen("result/{originalPhotoUrl}/{generatedPhotoUrl}") {
+        fun create(originalPhotoUrl: String, generatedPhotoUrl: String): String {
+            val encOriginal = java.net.URLEncoder.encode(originalPhotoUrl, Charsets.UTF_8.name())
+            val encGenerated = java.net.URLEncoder.encode(generatedPhotoUrl, Charsets.UTF_8.name())
+            return "result/$encOriginal/$encGenerated"
+        }
+    }
 }
 
 @Composable
@@ -117,12 +125,18 @@ fun AppNavigation(
                 LaunchedEffect(simState) {
                     when (simState) {
                         is SimulationState.Success -> {
-                            navController.navigate(Screen.Result.route) {
+                            val s = simState as SimulationState.Success
+                            val route = Screen.Result.create(
+                                s.result.beforeImageUrl,
+                                s.result.afterImageUrl
+                            )
+                            navController.navigate(route) {
                                 popUpTo(Screen.Processing.route) { inclusive = true }
                             }
                         }
                         is SimulationState.Error -> {
-                            navController.navigate(Screen.Result.route) {
+                            val route = Screen.Result.create("", "")
+                            navController.navigate(route) {
                                 popUpTo(Screen.Processing.route) { inclusive = true }
                             }
                         }
@@ -132,21 +146,56 @@ fun AppNavigation(
 
                 ProcessingScreen()
             }
-            composable(Screen.Result.route) { entry ->
+            composable(
+                route = Screen.Result.route,
+                arguments = listOf(
+                    navArgument("originalPhotoUrl") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("generatedPhotoUrl") { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { entry ->
                 val parentEntry = remember(entry) {
                     navController.getBackStackEntry(Screen.SimulationFlow.route)
                 }
                 val sharedVm: SimulationSharedViewModel = hiltViewModel(parentEntry)
                 val simState by sharedVm.state.collectAsState()
+                val saveState by sharedVm.saveState.collectAsState()
                 val context = LocalContext.current
 
                 val successState = simState as? SimulationState.Success
                 val errorState = simState as? SimulationState.Error
+                val originalUrl = entry.arguments?.getString("originalPhotoUrl").orEmpty()
+                val generatedUrl = entry.arguments?.getString("generatedPhotoUrl").orEmpty()
+                val decodedOriginal = try {
+                    java.net.URLDecoder.decode(originalUrl, Charsets.UTF_8.name())
+                } catch (_: Exception) { originalUrl }
+                val decodedGenerated = try {
+                    java.net.URLDecoder.decode(generatedUrl, Charsets.UTF_8.name())
+                } catch (_: Exception) { generatedUrl }
+
+                LaunchedEffect(saveState) {
+                    when (saveState) {
+                        is SaveSimulationState.Success -> {
+                            delay(2000) // Show success message before navigating
+                            sharedVm.clearSaveState()
+                            sharedVm.reset()
+                            navController.popBackStack(Screen.Dashboard.route, false)
+                        }
+                        else -> {}
+                    }
+                }
 
                 ResultScreen(
-                    result = successState?.result,
+                    originalPhotoUrl = decodedOriginal,
+                    generatedPhotoUrl = decodedGenerated,
                     patientName = successState?.patientName,
+                    treatmentName = successState?.result?.treatmentName ?: "Diseño de Sonrisa IA",
+                    description = successState?.result?.description ?: "",
+                    expectedDuration = successState?.result?.expectedDuration ?: "2-3 sesiones",
+                    estimatedCost = successState?.result?.estimatedCost ?: "Consultar con el doctor",
                     errorMessage = errorState?.message,
+                    isSaving = saveState is SaveSimulationState.Saving,
+                    isSaveSuccess = saveState is SaveSimulationState.Success,
+                    saveError = (saveState as? SaveSimulationState.Error)?.message,
                     onBack = {
                         sharedVm.reset()
                         navController.popBackStack(Screen.SimulationFlow.route, true)
@@ -168,13 +217,13 @@ fun AppNavigation(
                     },
                     onSaveResult = { finalDescription ->
                         sharedVm.updateDescription(finalDescription)
-                        sharedVm.reset()
-                        navController.popBackStack(Screen.Dashboard.route, false)
+                        sharedVm.saveSimulationResult(finalDescription)
                     },
                     onDiscard = {
                         sharedVm.reset()
                         navController.popBackStack(Screen.SimulationFlow.route, true)
-                    }
+                    },
+                    onDismissSaveError = { sharedVm.clearSaveState() }
                 )
             }
         }

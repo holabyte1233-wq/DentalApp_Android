@@ -14,6 +14,8 @@ data class Patient(
     val email: String = "",
     @SerialName("foto_url")
     val fotoUrl: String? = null,
+    @SerialName("doctor_id")
+    val doctorId: String? = null,
     @Transient
     val avatar: String = "",
     @Transient

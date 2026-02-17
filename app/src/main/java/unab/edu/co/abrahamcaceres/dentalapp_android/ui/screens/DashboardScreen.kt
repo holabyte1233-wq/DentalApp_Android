@@ -27,8 +27,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -64,6 +65,10 @@ fun DashboardScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val isWide = LocalConfiguration.current.screenWidthDp >= 600
+
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
 
     Column(modifier = modifier.fillMaxSize().background(SystemGray6)) {
         GlassmorphicHeader(title = "DentalTech", onLogout = { viewModel.signOut(onLogout) })
@@ -118,7 +123,7 @@ fun DashboardScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No hay pacientes registrados",
+                                text = "No hay pacientes recientes",
                                 color = TextSecondary
                             )
                         }

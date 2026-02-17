@@ -23,13 +23,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,8 +50,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import kotlin.math.roundToInt
-import unab.edu.co.abrahamcaceres.dentalapp_android.data.SimulationResult
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
@@ -64,15 +70,25 @@ data class SharePreviewData(
 @Composable
 fun ResultScreen(
     modifier: Modifier = Modifier,
-    result: SimulationResult?,
+    originalPhotoUrl: String,
+    generatedPhotoUrl: String,
     patientName: String? = null,
+    treatmentName: String = "Diseño de Sonrisa IA",
+    description: String = "",
+    expectedDuration: String = "2-3 sesiones",
+    estimatedCost: String = "Consultar con el doctor",
     errorMessage: String? = null,
+    isSaving: Boolean = false,
+    isSaveSuccess: Boolean = false,
+    saveError: String? = null,
     onBack: () -> Unit,
     onShare: (previewData: SharePreviewData) -> Unit,
     onSaveResult: (finalDescription: String) -> Unit,
-    onDiscard: () -> Unit
+    onDiscard: () -> Unit,
+    onDismissSaveError: () -> Unit = {}
 ) {
-    if (result == null) {
+    val hasValidImages = originalPhotoUrl.isNotBlank() && generatedPhotoUrl.isNotBlank()
+    if (!hasValidImages) {
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -94,41 +110,64 @@ fun ResultScreen(
         return
     }
 
-    val data = result
-    var editableDescription by remember(data) { mutableStateOf(data.description) }
+    var editableDescription by remember(description) { mutableStateOf(description) }
     var showSharePreview by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(saveError) {
+        saveError?.let { msg ->
+            snackbarHostState.showSnackbar(
+                message = "No se pudo guardar: $msg",
+                duration = SnackbarDuration.Long
+            )
+            onDismissSaveError()
+        }
+    }
+    LaunchedEffect(isSaveSuccess) {
+        if (isSaveSuccess) {
+            snackbarHostState.showSnackbar(
+                message = "Diseño guardado correctamente. Redirigiendo...",
+                duration = SnackbarDuration.Short
+            )
+        }
+    }
 
     if (showSharePreview) {
         SharePreviewDialog(
             previewData = SharePreviewData(
                 patientName = patientName,
-                treatmentName = data.treatmentName,
+                treatmentName = treatmentName,
                 description = editableDescription,
-                beforeImageUrl = data.beforeImageUrl,
-                afterImageUrl = data.afterImageUrl,
-                expectedDuration = data.expectedDuration,
-                estimatedCost = data.estimatedCost
+                beforeImageUrl = originalPhotoUrl,
+                afterImageUrl = generatedPhotoUrl,
+                expectedDuration = expectedDuration,
+                estimatedCost = estimatedCost
             ),
             onDismiss = { showSharePreview = false },
             onShare = {
                 onShare(SharePreviewData(
                     patientName = patientName,
-                    treatmentName = data.treatmentName,
+                    treatmentName = treatmentName,
                     description = editableDescription,
-                    beforeImageUrl = data.beforeImageUrl,
-                    afterImageUrl = data.afterImageUrl,
-                    expectedDuration = data.expectedDuration,
-                    estimatedCost = data.estimatedCost
+                    beforeImageUrl = originalPhotoUrl,
+                    afterImageUrl = generatedPhotoUrl,
+                    expectedDuration = expectedDuration,
+                    estimatedCost = estimatedCost
                 ))
                 showSharePreview = false
             }
         )
     }
 
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { paddingValues ->
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(SystemGray6)
+            .padding(paddingValues)
     ) {
         Row(
             modifier = Modifier
@@ -178,8 +217,8 @@ fun ResultScreen(
                 .padding(horizontal = 16.dp)
         ) {
             BeforeAfterSlider(
-                beforeImageUrl = data.beforeImageUrl,
-                afterImageUrl = data.afterImageUrl,
+                beforeImageUrl = originalPhotoUrl,
+                afterImageUrl = generatedPhotoUrl,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
@@ -204,7 +243,7 @@ fun ResultScreen(
                 .padding(20.dp)
         ) {
             Text(
-                text = data.treatmentName,
+                text = treatmentName,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -231,12 +270,12 @@ fun ResultScreen(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Duración estimada: ${data.expectedDuration}",
+                text = "Duración estimada: $expectedDuration",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
             Text(
-                text = "Coste estimado: ${data.estimatedCost}",
+                text = "Coste estimado: $estimatedCost",
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextSecondary
             )
@@ -252,16 +291,25 @@ fun ResultScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             androidx.compose.material3.Button(
-                onClick = { onSaveResult(editableDescription) },
+                onClick = { if (!isSaving) onSaveResult(editableDescription) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
+                enabled = !isSaving,
                 shape = RoundedCornerShape(24.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = Color.Black
                 )
             ) {
-                Text("Guardar Resultado", color = Color.White)
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Guardar Resultado", color = Color.White)
+                }
             }
             androidx.compose.material3.Button(
                 onClick = onDiscard,
@@ -278,6 +326,13 @@ fun ResultScreen(
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
+    }
+}
+
+private sealed class ImageLoadStatus {
+    data object Loading : ImageLoadStatus()
+    data object Loaded : ImageLoadStatus()
+    data class Error(val reason: String) : ImageLoadStatus()
 }
 
 @Composable
@@ -288,10 +343,37 @@ private fun BeforeAfterSlider(
 ) {
     var sliderPosition by remember { mutableStateOf(0.5f) }
     var widthPx by remember { mutableStateOf(0f) }
+    var beforeStatus by remember(beforeImageUrl) { mutableStateOf<ImageLoadStatus>(ImageLoadStatus.Loading) }
+    var afterStatus by remember(afterImageUrl) { mutableStateOf<ImageLoadStatus>(ImageLoadStatus.Loading) }
     val density = LocalDensity.current
 
+    val loadStatusText = remember(beforeStatus, afterStatus) {
+        when {
+            beforeStatus is ImageLoadStatus.Error && afterStatus is ImageLoadStatus.Error ->
+                "Antes: ${(beforeStatus as ImageLoadStatus.Error).reason} • Después: ${(afterStatus as ImageLoadStatus.Error).reason}"
+            beforeStatus is ImageLoadStatus.Error ->
+                "No se pudo cargar imagen Antes: ${(beforeStatus as ImageLoadStatus.Error).reason}"
+            afterStatus is ImageLoadStatus.Error ->
+                "No se pudo cargar imagen Después: ${(afterStatus as ImageLoadStatus.Error).reason}"
+            beforeStatus is ImageLoadStatus.Loaded && afterStatus is ImageLoadStatus.Loaded ->
+                "Imágenes cargadas correctamente"
+            else ->
+                "Cargando imágenes..."
+        }
+    }
+    val loadStatusColor = when {
+        beforeStatus is ImageLoadStatus.Error || afterStatus is ImageLoadStatus.Error ->
+            MaterialTheme.colorScheme.error
+        beforeStatus is ImageLoadStatus.Loaded && afterStatus is ImageLoadStatus.Loaded ->
+            MaterialTheme.colorScheme.primary
+        else ->
+            TextSecondary
+    }
+
+    Column(modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
+            .fillMaxSize()
             .clip(RoundedCornerShape(24.dp))
             .onSizeChanged { widthPx = it.width.toFloat() }
     ) {
@@ -300,7 +382,14 @@ private fun BeforeAfterSlider(
             model = afterImageUrl,
             contentDescription = "Después",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            onSuccess = { afterStatus = ImageLoadStatus.Loaded },
+            onError = { state ->
+                afterStatus = ImageLoadStatus.Error(
+                    (state as? AsyncImagePainter.State.Error)?.result?.throwable?.message
+                        ?: "Error desconocido"
+                )
+            }
         )
         // Before (left) image - clipped
         Box(modifier = Modifier.fillMaxSize()) {
@@ -314,7 +403,14 @@ private fun BeforeAfterSlider(
                     model = beforeImageUrl,
                     contentDescription = "Antes",
                     modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+                    contentScale = ContentScale.Crop,
+                    onSuccess = { beforeStatus = ImageLoadStatus.Loaded },
+                    onError = { state ->
+                        beforeStatus = ImageLoadStatus.Error(
+                            (state as? AsyncImagePainter.State.Error)?.result?.throwable?.message
+                                ?: "Error desconocido"
+                        )
+                    }
                 )
             }
         }
@@ -377,6 +473,13 @@ private fun BeforeAfterSlider(
                 }
             }
         }
+    }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = loadStatusText,
+            style = MaterialTheme.typography.labelSmall,
+            color = loadStatusColor
+        )
     }
 }
 
