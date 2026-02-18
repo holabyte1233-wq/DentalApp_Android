@@ -286,6 +286,7 @@ fun ResultScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 32.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)

@@ -44,8 +44,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.content.Context
+import android.content.Intent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,6 +62,33 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.CardWhite
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.DestructiveRed
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
+
+/** Abre la app de correo según el dominio del email (Gmail, Outlook, etc.). */
+private fun openEmailApp(context: Context, email: String) {
+    val emailLower = email.lowercase()
+    val specificIntent = when {
+        emailLower.contains("@gmail.com") ->
+            context.packageManager.getLaunchIntentForPackage("com.google.android.gm")
+        emailLower.contains("@hotmail") || emailLower.contains("@outlook") ->
+            context.packageManager.getLaunchIntentForPackage("com.microsoft.office.outlook")
+        else -> null
+    }
+    val intent = specificIntent ?: Intent.makeMainSelectorActivity(
+        Intent.ACTION_MAIN,
+        Intent.CATEGORY_APP_EMAIL
+    )
+    try {
+        context.startActivity(Intent.createChooser(intent, "Abrir correo"))
+    } catch (_: Exception) {
+        try {
+            val fallback = Intent.makeMainSelectorActivity(
+                Intent.ACTION_MAIN,
+                Intent.CATEGORY_APP_EMAIL
+            )
+            context.startActivity(Intent.createChooser(fallback, "Abrir correo"))
+        } catch (_: Exception) { /* No mail app */ }
+    }
+}
 
 @Composable
 fun LoginScreen(
@@ -78,6 +108,13 @@ fun LoginScreen(
     var pendingEmail by remember { mutableStateOf("") }
     var pendingPassword by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.needsEmailConfirmation, email) {
+        if (uiState.needsEmailConfirmation && email.isNotBlank()) {
+            openEmailApp(context, email)
+        }
+    }
 
     LaunchedEffect(uiState.savedEmail, uiState.savedPassword) {
         if (email.isEmpty() && uiState.savedEmail.isNotEmpty()) {
@@ -116,6 +153,13 @@ fun LoginScreen(
                 }
             },
             confirmButton = {
+                TextButton(onClick = {
+                    if (email.isNotBlank()) openEmailApp(context, email)
+                }) {
+                    Text("Abrir Correo", color = RoyalBlue)
+                }
+            },
+            dismissButton = {
                 TextButton(onClick = { viewModel.dismissEmailConfirmation() }) {
                     Text("Entendido", color = RoyalBlue)
                 }
@@ -368,18 +412,26 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        ScaleButton(
-            text = if (isRegisterMode) "Registrarse" else "Iniciar Sesión",
-            onClick = { validateAndSubmit() },
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            isLoading = uiState.isLoading
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
+        ) {
+            ScaleButton(
+                text = if (isRegisterMode) "Registrarse" else "Iniciar Sesión",
+                onClick = { validateAndSubmit() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                isLoading = uiState.isLoading
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         SnackbarHost(hostState = snackbarHostState)
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

@@ -110,8 +110,10 @@ class SimulationSharedViewModel @Inject constructor(
                     uri.toString()
                 }
 
+                // Demo: con Gemini activo solo hay descripción IA, no cambio de imagen.
+                // En modo Mock usamos una imagen de ejemplo para un slider Antes/Después visual.
                 val afterUrl = if (isGeminiActive) {
-                    beforeUrl
+                    beforeUrl  // misma imagen; la IA solo aporta texto
                 } else {
                     val resName = appContext.resources.getResourceEntryName(R.drawable.ic_sample_dental_after)
                     "android.resource://${appContext.packageName}/drawable/$resName"
