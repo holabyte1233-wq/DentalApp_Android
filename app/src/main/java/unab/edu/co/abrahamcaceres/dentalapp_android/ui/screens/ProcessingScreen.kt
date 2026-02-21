@@ -24,8 +24,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
+
+private val trackGray = Color(0xFF3A3A3C)
+private const val procedureName = "Diseño Sonrisa"
 
 @Composable
 fun ProcessingScreen(
@@ -46,7 +49,7 @@ fun ProcessingScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
+            .background(Color.Black)
     ) {
         Column(
             modifier = Modifier
@@ -60,12 +63,22 @@ fun ProcessingScreen(
                 modifier = Modifier.size(140.dp)
             ) {
                 Canvas(Modifier.fillMaxSize()) {
+                    val strokeWidth = 8.dp.toPx()
+                    // Track: dark gray full ring
                     drawArc(
-                        color = RoyalBlue,
+                        color = trackGray,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+                    // Progress: white segment
+                    drawArc(
+                        color = Color.White,
                         startAngle = -90f,
                         sweepAngle = 360f * progressValue,
                         useCenter = false,
-                        style = Stroke(width = 8.dp.toPx(), cap = StrokeCap.Round)
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                     )
                 }
                 Text(
@@ -76,15 +89,16 @@ fun ProcessingScreen(
             }
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Procesando imagen...",
+                text = "Procesando con IA...",
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Generando simulación con IA",
+                text = procedureName,
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.White.copy(alpha = 0.9f)
+                color = Color.White
             )
         }
     }

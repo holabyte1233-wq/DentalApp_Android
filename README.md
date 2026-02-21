@@ -11,6 +11,7 @@ Aplicación Android para simulaciones de diseño de sonrisa, con integración a 
 
 ## Recomendación para la Demo
 
+
 Para probar la app y que se vea **visualmente atractiva** (con un cambio claro en el slider Antes/Después):
 
 | Modo | API Key | Resultado visual |
@@ -28,3 +29,4 @@ Para probar la app y que se vea **visualmente atractiva** (con un cambio claro e
 - `domain/` — Interfaces de repositorios
 - `presentation/` — ViewModels por pantalla
 - `ui/` — Compose screens, navegación, temas
++

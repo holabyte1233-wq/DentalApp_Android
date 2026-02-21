@@ -77,7 +77,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.coil.compose)
-    implementation(libs.androidx.security.crypto)
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
@@ -91,6 +91,12 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
 
     implementation(libs.google.generativeai)
+
+    implementation("androidx.camera:camera-core:1.3.4")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.4")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

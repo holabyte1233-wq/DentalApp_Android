@@ -35,7 +35,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
 
@@ -68,7 +68,7 @@ fun SimulatorScreen(
                 .padding(16.dp)
         ) {
             TextButton(onClick = onCancel) {
-                Text("Cancelar", color = RoyalBlue)
+                Text("Cancelar", color = AccentBlue)
             }
         }
 
@@ -124,7 +124,7 @@ fun SimulatorScreen(
                 Canvas(Modifier.fillMaxSize()) {
                     val strokeWidth = 6.dp.toPx()
                     drawArc(
-                        color = RoyalBlue,
+                        color = AccentBlue,
                         startAngle = -90f, // start from top
                         sweepAngle = 360f * progress,
                         useCenter = false,

@@ -20,7 +20,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mail
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -58,10 +60,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.hilt.navigation.compose.hiltViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.login.LoginViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.components.ClockDisplay
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentBlue
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentOrange
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.CardWhite
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.DestructiveRed
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 
 /** Abre la app de correo según el dominio del email (Gmail, Outlook, etc.). */
 private fun openEmailApp(context: Context, email: String) {
@@ -98,15 +108,20 @@ fun LoginScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var isRegisterMode by remember { mutableStateOf(false) }
-    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var profileImageUri by remember { mutableStateOf<Uri?>(null) }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
-    var pendingName by remember { mutableStateOf("") }
     var pendingEmail by remember { mutableStateOf("") }
     var pendingPassword by remember { mutableStateOf("") }
+    var pendingName by remember { mutableStateOf("") }
+    var pendingPhone by remember { mutableStateOf("") }
+    var pendingAvatarUri by remember { mutableStateOf<Uri?>(null) }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) profileImageUri = uri }
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -156,12 +171,12 @@ fun LoginScreen(
                 TextButton(onClick = {
                     if (email.isNotBlank()) openEmailApp(context, email)
                 }) {
-                    Text("Abrir Correo", color = RoyalBlue)
+                    Text("Abrir Correo", color = AccentBlue)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.dismissEmailConfirmation() }) {
-                    Text("Entendido", color = RoyalBlue)
+                    Text("Entendido", color = AccentBlue)
                 }
             }
         )
@@ -175,6 +190,7 @@ fun LoginScreen(
                 Column {
                     Text("Nombre: $pendingName")
                     Text("Email: $pendingEmail")
+                    Text("Teléfono: $pendingPhone")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("¿Es correcto este correo? Recibirás un enlace de confirmación.")
                 }
@@ -182,9 +198,12 @@ fun LoginScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showConfirmDialog = false
-                    viewModel.signUp(pendingName, pendingEmail, pendingPassword)
+                    val avatarBytes = pendingAvatarUri?.let { uri ->
+                        context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    }
+                    viewModel.signUp(pendingEmail, pendingPassword, pendingName, pendingPhone, avatarBytes)
                 }) {
-                    Text("Confirmar", color = RoyalBlue)
+                    Text("Confirmar", color = AccentBlue)
                 }
             },
             dismissButton = {
@@ -197,10 +216,12 @@ fun LoginScreen(
 
     fun validateAndSubmit() {
         if (isRegisterMode) {
-            if (viewModel.validateForRegister(name, email, password)) {
-                pendingName = name
+            if (viewModel.validateForRegister(email, password, name, phone)) {
                 pendingEmail = email
                 pendingPassword = password
+                pendingName = name
+                pendingPhone = phone
+                pendingAvatarUri = profileImageUri
                 showConfirmDialog = true
             }
         } else {
@@ -210,8 +231,8 @@ fun LoginScreen(
         }
     }
 
-    val nameError = uiState.nameError
     val emailError = uiState.emailError
+    val phoneError = uiState.phoneError
     val passwordError = uiState.passwordError
 
     if (uiState.isCheckingSession) {
@@ -281,6 +302,43 @@ fun LoginScreen(
                     .background(CardWhite)
                     .padding(16.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(RoundedCornerShape(40.dp))
+                            .border(2.dp, AccentBlue, RoundedCornerShape(40.dp))
+                            .clickable { galleryLauncher.launch("image/*") },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (profileImageUri != null) {
+                            AsyncImage(
+                                model = profileImageUri,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.AddAPhoto,
+                                contentDescription = "Añadir foto",
+                                modifier = Modifier.size(32.dp),
+                                tint = AccentOrange
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Foto de perfil",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it; viewModel.clearError() },
@@ -288,8 +346,29 @@ fun LoginScreen(
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(20.dp)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    isError = nameError != null,
-                    supportingText = nameError?.let { { Text(it, color = DestructiveRed) } },
+                    isError = uiState.nameError != null,
+                    supportingText = uiState.nameError?.let { { Text(it, color = DestructiveRed) } },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        errorBorderColor = DestructiveRed,
+                        errorSupportingTextColor = DestructiveRed,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = phone,
+                    onValueChange = { phone = it; viewModel.clearError() },
+                    label = { Text("Teléfono") },
+                    leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    isError = phoneError != null,
+                    supportingText = phoneError?.let { { Text(it, color = DestructiveRed) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -383,7 +462,7 @@ fun LoginScreen(
                     checked = rememberMe,
                     onCheckedChange = { rememberMe = it },
                     colors = androidx.compose.material3.CheckboxDefaults.colors(
-                        checkedColor = RoyalBlue,
+                        checkedColor = AccentBlue,
                         uncheckedColor = MaterialTheme.colorScheme.outline
                     )
                 )
@@ -407,7 +486,7 @@ fun LoginScreen(
                     viewModel.clearError()
                 },
             style = MaterialTheme.typography.bodySmall,
-            color = RoyalBlue
+            color = AccentBlue
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -417,12 +496,15 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .padding(horizontal = 32.dp)
         ) {
+            val isRegisterValid = isRegisterMode && name.isNotBlank() && email.isNotBlank() && password.isNotBlank() && phone.isNotBlank()
+            val isLoginValid = !isRegisterMode && email.isNotBlank() && password.isNotBlank()
             ScaleButton(
                 text = if (isRegisterMode) "Registrarse" else "Iniciar Sesión",
                 onClick = { validateAndSubmit() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
+                enabled = isRegisterValid || isLoginValid,
                 isLoading = uiState.isLoading
             )
         }
@@ -440,12 +522,13 @@ private fun ScaleButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     isLoading: Boolean = false
 ) {
     androidx.compose.material3.Button(
         onClick = onClick,
         modifier = modifier,
-        enabled = !isLoading,
+        enabled = enabled && !isLoading,
         shape = RoundedCornerShape(24.dp),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = Color.Black,

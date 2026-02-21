@@ -2,6 +2,8 @@ package unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,7 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,16 +32,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -50,7 +51,8 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.dashboard.Dashb
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.dashboard.DashboardViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.components.ClockDisplay
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.components.GlassmorphicHeader
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.Background
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.Primary
 import java.text.SimpleDateFormat
 import java.util.Locale
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
@@ -61,16 +63,16 @@ fun DashboardScreen(
     onLogout: () -> Unit,
     onPatientClick: (String) -> Unit,
     onNewDesign: () -> Unit,
+    onSettingsClick: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val isWide = LocalConfiguration.current.screenWidthDp >= 600
 
     LaunchedEffect(Unit) {
         viewModel.refresh()
     }
 
-    Column(modifier = modifier.fillMaxSize().background(SystemGray6)) {
+    Column(modifier = modifier.fillMaxSize().background(Background)) {
         GlassmorphicHeader(title = "DentalTech", onLogout = { viewModel.signOut(onLogout) })
 
         Column(
@@ -133,13 +135,12 @@ fun DashboardScreen(
                                 .weight(1f)
                                 .fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
-                            contentPadding = PaddingValues(bottom = 100.dp)
+                            contentPadding = PaddingValues(bottom = 120.dp)
                         ) {
-                            items(state.patients) { patient ->
+                            items(state.patients, key = { it.id }) { patient: Patient ->
                                 PatientCard(
                                     patient = patient,
-                                    onClick = { onPatientClick(patient.id) },
-                                    onRecordsClick = { /* open records */ }
+                                    onClick = { onPatientClick(patient.id) }
                                 )
                             }
                         }
@@ -148,34 +149,81 @@ fun DashboardScreen(
             }
         }
 
-        // + Nuevo Diseño button - full width mobile, bottom-right on desktop; gradient backdrop
-        Box(
+        // Custom bottom nav: white bar, Inicio | center FAB | Ajustes
+        CustomBottomNavBar(
+            onHomeClick = { /* already on Dashboard */ },
+            onNewDesign = onNewDesign,
+            onSettingsClick = onSettingsClick
+        )
+    }
+}
+
+@Composable
+private fun CustomBottomNavBar(
+    onHomeClick: () -> Unit,
+    onNewDesign: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Transparent, SystemGray6, SystemGray6)
-                    )
-                )
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            contentAlignment = if (isWide) Alignment.BottomEnd else Alignment.Center
+                .height(80.dp)
+                .background(Color.White),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            androidx.compose.material3.Button(
+            // Inicio (left)
+            IconButton(
+                onClick = onHomeClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.Home,
+                        contentDescription = "Inicio",
+                        modifier = Modifier.size(24.dp),
+                        tint = Primary
+                    )
+                    Text("Inicio", style = MaterialTheme.typography.labelSmall, color = Primary)
+                }
+            }
+            // Center: empty for FAB overlap
+            Spacer(modifier = Modifier.weight(1f))
+            // Ajustes (right)
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier.weight(1f)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Filled.Settings,
+                        contentDescription = "Ajustes",
+                        modifier = Modifier.size(24.dp),
+                        tint = Primary
+                    )
+                    Text("Ajustes", style = MaterialTheme.typography.labelSmall, color = Primary)
+                }
+            }
+        }
+        // Center FAB - overlapping upward
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 40.dp)
+        ) {
+            androidx.compose.material3.FloatingActionButton(
                 onClick = onNewDesign,
-                modifier = if (isWide) Modifier else Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(50),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Color.Black
-                )
+                modifier = Modifier.size(64.dp),
+                containerColor = Primary,
+                contentColor = Color.White,
+                shape = CircleShape
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = Color.White
+                    contentDescription = "Nuevo Diseño",
+                    modifier = Modifier.size(32.dp)
                 )
-                Spacer(modifier = Modifier.size(8.dp))
-                Text("+ Nuevo Diseño", color = Color.White)
             }
         }
     }
@@ -184,8 +232,7 @@ fun DashboardScreen(
 @Composable
 private fun PatientCard(
     patient: Patient,
-    onClick: () -> Unit,
-    onRecordsClick: () -> Unit
+    onClick: () -> Unit
 ) {
     val lastVisitFormatted = try {
         val esLocale = Locale.forLanguageTag("es-ES")
@@ -236,25 +283,18 @@ private fun PatientCard(
             )
         }
         IconButton(
-            onClick = { onRecordsClick() },
+            onClick = onClick,
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(SystemGray6)
+                .background(Background)
         ) {
             Icon(
-                Icons.Default.Description,
-                contentDescription = "Expediente",
+                Icons.Default.ChevronRight,
+                contentDescription = "Ver detalles",
                 modifier = Modifier.size(20.dp),
                 tint = TextSecondary
             )
         }
-        Spacer(modifier = Modifier.width(4.dp))
-        Icon(
-            Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = TextSecondary
-        )
     }
 }

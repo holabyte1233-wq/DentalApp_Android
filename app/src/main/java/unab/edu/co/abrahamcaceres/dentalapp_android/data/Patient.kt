@@ -33,7 +33,11 @@ data class TreatmentRecord(
     val date: String,
     val status: String, // "Completado" | "En Progreso"
     val notes: String,
-    val colorIndicator: Long = 0xFF2563EB // left border color
+    val colorIndicator: Long = 0xFF2563EB, // left border color
+    @SerialName("before_image_url")
+    val beforeImageUrl: String? = null,
+    @SerialName("after_image_url")
+    val afterImageUrl: String? = null
 )
 
 @Serializable

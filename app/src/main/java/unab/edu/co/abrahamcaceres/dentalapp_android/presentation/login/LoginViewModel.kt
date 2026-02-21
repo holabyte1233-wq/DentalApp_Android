@@ -25,9 +25,10 @@ data class LoginUiState(
     val needsEmailConfirmation: Boolean = false,
     val savedEmail: String = "",
     val savedPassword: String = "",
-    val nameError: String? = null,
     val emailError: String? = null,
-    val passwordError: String? = null
+    val passwordError: String? = null,
+    val phoneError: String? = null,
+    val nameError: String? = null
 )
 
 @HiltViewModel
@@ -73,8 +74,6 @@ class LoginViewModel @Inject constructor(
 
     private fun isValidPassword(pass: String): Boolean = pass.length > 5
 
-    private fun isValidName(name: String): Boolean = name.isNotBlank()
-
     fun loadSavedCredentials() {
         val email = securePrefs.getString("saved_email", null) ?: ""
         val password = securePrefs.getString("saved_password", null) ?: ""
@@ -92,6 +91,7 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    @Suppress("UNUSED_MEMBER")
     fun clearSavedCredentials() {
         securePrefs.edit { clear() }
         _uiState.update { it.copy(savedEmail = "", savedPassword = "") }
@@ -114,13 +114,13 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun signUp(name: String, email: String, password: String) {
-        if (!validateForRegister(name, email, password)) return
+    fun signUp(email: String, password: String, name: String, phone: String, avatarBytes: ByteArray?) {
+        if (!validateForRegister(email, password, name, phone)) return
 
         _uiState.update { it.copy(isLoading = true, error = null, isSuccess = false, needsEmailConfirmation = false) }
 
         viewModelScope.launch {
-            val result = repository.signUp(name, email, password)
+            val result = repository.signUp(email, password, name, phone, avatarBytes)
             result.fold(
                 onSuccess = {
                     val hasSession = repository.hasActiveSession()
@@ -156,15 +156,14 @@ class LoginViewModel @Inject constructor(
     }
 
     fun clearError() {
-        _uiState.update { it.copy(error = null, nameError = null, emailError = null, passwordError = null) }
+        _uiState.update { it.copy(error = null, emailError = null, passwordError = null, phoneError = null, nameError = null) }
     }
 
-    fun validateForRegister(name: String, email: String, password: String): Boolean {
-        _uiState.update { it.copy(nameError = null, emailError = null, passwordError = null) }
-        if (!isValidName(name)) {
-            _uiState.update { it.copy(nameError = "El nombre es requerido") }
-            return false
-        }
+    private fun isValidPhone(phone: String): Boolean = phone.isNotBlank()
+    private fun isValidName(name: String): Boolean = name.isNotBlank()
+
+    fun validateForRegister(email: String, password: String, name: String, phone: String): Boolean {
+        _uiState.update { it.copy(emailError = null, passwordError = null, phoneError = null, nameError = null) }
         if (!isValidEmail(email)) {
             _uiState.update { it.copy(emailError = "Formato de correo inválido") }
             return false
@@ -173,11 +172,19 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(passwordError = "La contraseña debe tener más de 5 caracteres") }
             return false
         }
+        if (!isValidName(name)) {
+            _uiState.update { it.copy(nameError = "El nombre es requerido") }
+            return false
+        }
+        if (!isValidPhone(phone)) {
+            _uiState.update { it.copy(phoneError = "El teléfono es requerido") }
+            return false
+        }
         return true
     }
 
     fun validateForLogin(email: String, password: String): Boolean {
-        _uiState.update { it.copy(nameError = null, emailError = null, passwordError = null) }
+        _uiState.update { it.copy(emailError = null, passwordError = null) }
         if (!isValidEmail(email)) {
             _uiState.update { it.copy(emailError = "Formato de correo inválido") }
             return false

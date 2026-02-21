@@ -1,13 +1,12 @@
 package unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
@@ -16,11 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,8 +26,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -43,17 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import kotlin.math.roundToInt
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.TextSecondary
 import androidx.compose.ui.graphics.Color
 
@@ -88,11 +76,14 @@ fun ResultScreen(
     onDismissSaveError: () -> Unit = {}
 ) {
     val hasValidImages = originalPhotoUrl.isNotBlank() && generatedPhotoUrl.isNotBlank()
+    val darkBg = Color.Black
+    val darkSurface = Color(0xFF1C1C1E)
+
     if (!hasValidImages) {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(SystemGray6),
+                .background(darkBg),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -104,7 +95,7 @@ fun ResultScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             TextButton(onClick = onBack) {
-                Text("Volver", color = RoyalBlue)
+                Text("Volver", color = Color.White)
             }
         }
         return
@@ -161,12 +152,13 @@ fun ResultScreen(
 
     Scaffold(
         modifier = modifier,
+        containerColor = darkBg,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SystemGray6)
+            .verticalScroll(rememberScrollState())
             .padding(paddingValues)
     ) {
         Row(
@@ -177,14 +169,14 @@ fun ResultScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TextButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp), tint = RoyalBlue)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
                 Spacer(modifier = Modifier.size(4.dp))
-                Text("Atrás", color = RoyalBlue)
+                Text("Atrás", color = Color.White)
             }
             TextButton(onClick = { showSharePreview = true }) {
-                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp), tint = RoyalBlue)
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
                 Spacer(modifier = Modifier.size(4.dp))
-                Text("Compartir", color = RoyalBlue)
+                Text("Compartir", color = Color.White)
             }
         }
 
@@ -192,13 +184,14 @@ fun ResultScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .padding(vertical = 24.dp),
+                .padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Resultado de Simulación",
                 style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = Color.White,
+                fontWeight = FontWeight.Medium
             )
             if (!patientName.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -210,96 +203,35 @@ fun ResultScreen(
             }
         }
 
-        // Before/After slider
-        Column(
+        // Antes / Después - buttons to switch view
+        BeforeAfterButtons(
+            beforeImageUrl = originalPhotoUrl,
+            afterImageUrl = generatedPhotoUrl,
             modifier = Modifier
                 .fillMaxWidth()
+                .height(240.dp)
                 .padding(horizontal = 16.dp)
-        ) {
-            BeforeAfterSlider(
-                beforeImageUrl = originalPhotoUrl,
-                afterImageUrl = generatedPhotoUrl,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Desliza para comparar",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Recommendation card - editable description for doctor approval
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(20.dp)
-        ) {
-            Text(
-                text = treatmentName,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Descripción (el doctor puede editar antes de guardar)",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            OutlinedTextField(
-                value = editableDescription,
-                onValueChange = { editableDescription = it },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                maxLines = 6,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White,
-                    focusedBorderColor = RoyalBlue,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Duración estimada: $expectedDuration",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-            Text(
-                text = "Coste estimado: $estimatedCost",
-                style = MaterialTheme.typography.bodyMedium,
-                color = TextSecondary
-            )
-        }
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(20.dp),
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             androidx.compose.material3.Button(
                 onClick = { if (!isSaving) onSaveResult(editableDescription) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .border(2.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(24.dp)),
                 enabled = !isSaving,
                 shape = RoundedCornerShape(24.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Color.Black
+                    containerColor = darkSurface,
+                    disabledContainerColor = Color.Black.copy(alpha = 0.5f)
                 )
             ) {
                 if (isSaving) {
@@ -316,13 +248,14 @@ fun ResultScreen(
                 onClick = onDiscard,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(56.dp)
+                    .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)),
                 shape = RoundedCornerShape(24.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE5E5EA)
+                    containerColor = darkSurface
                 )
             ) {
-                Text("Descartar", color = TextSecondary)
+                Text("Descartar", color = Color.White)
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
@@ -330,157 +263,70 @@ fun ResultScreen(
     }
 }
 
-private sealed class ImageLoadStatus {
-    data object Loading : ImageLoadStatus()
-    data object Loaded : ImageLoadStatus()
-    data class Error(val reason: String) : ImageLoadStatus()
-}
-
 @Composable
-private fun BeforeAfterSlider(
+private fun BeforeAfterButtons(
     beforeImageUrl: String,
     afterImageUrl: String,
     modifier: Modifier = Modifier
 ) {
-    var sliderPosition by remember { mutableStateOf(0.5f) }
-    var widthPx by remember { mutableStateOf(0f) }
-    var beforeStatus by remember(beforeImageUrl) { mutableStateOf<ImageLoadStatus>(ImageLoadStatus.Loading) }
-    var afterStatus by remember(afterImageUrl) { mutableStateOf<ImageLoadStatus>(ImageLoadStatus.Loading) }
-    val density = LocalDensity.current
-
-    val loadStatusText = remember(beforeStatus, afterStatus) {
-        when {
-            beforeStatus is ImageLoadStatus.Error && afterStatus is ImageLoadStatus.Error ->
-                "Antes: ${(beforeStatus as ImageLoadStatus.Error).reason} • Después: ${(afterStatus as ImageLoadStatus.Error).reason}"
-            beforeStatus is ImageLoadStatus.Error ->
-                "No se pudo cargar imagen Antes: ${(beforeStatus as ImageLoadStatus.Error).reason}"
-            afterStatus is ImageLoadStatus.Error ->
-                "No se pudo cargar imagen Después: ${(afterStatus as ImageLoadStatus.Error).reason}"
-            beforeStatus is ImageLoadStatus.Loaded && afterStatus is ImageLoadStatus.Loaded ->
-                "Imágenes cargadas correctamente"
-            else ->
-                "Cargando imágenes..."
-        }
-    }
-    val loadStatusColor = when {
-        beforeStatus is ImageLoadStatus.Error || afterStatus is ImageLoadStatus.Error ->
-            MaterialTheme.colorScheme.error
-        beforeStatus is ImageLoadStatus.Loaded && afterStatus is ImageLoadStatus.Loaded ->
-            MaterialTheme.colorScheme.primary
-        else ->
-            TextSecondary
-    }
+    var showAntes by remember { mutableStateOf(true) }
+    val darkSurface = Color(0xFF1C1C1E)
 
     Column(modifier = modifier) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(24.dp))
-            .onSizeChanged { widthPx = it.width.toFloat() }
-    ) {
-        // After (right) image - full
-        AsyncImage(
-            model = afterImageUrl,
-            contentDescription = "Después",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            onSuccess = { afterStatus = ImageLoadStatus.Loaded },
-            onError = { state ->
-                afterStatus = ImageLoadStatus.Error(
-                    (state as? AsyncImagePainter.State.Error)?.result?.throwable?.message
-                        ?: "Error desconocido"
-                )
-            }
-        )
-        // Before (left) image - clipped
-        Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(sliderPosition)
-                    .clip(RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp))
-            ) {
-                AsyncImage(
-                    model = beforeImageUrl,
-                    contentDescription = "Antes",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    onSuccess = { beforeStatus = ImageLoadStatus.Loaded },
-                    onError = { state ->
-                        beforeStatus = ImageLoadStatus.Error(
-                            (state as? AsyncImagePainter.State.Error)?.result?.throwable?.message
-                                ?: "Error desconocido"
-                        )
-                    }
-                )
-            }
-        }
-        // Labels: Antes (top-left), Después (top-right), white/90 backdrop
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
-                .align(Alignment.TopCenter)
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
+            TextButton(
+                onClick = { showAntes = true },
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.9f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (showAntes) Color.White
+                        else darkSurface
+                    )
             ) {
-                Text("Antes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Antes",
+                    color = if (showAntes) Color.Black else Color.White,
+                    fontWeight = if (showAntes) FontWeight.Bold else FontWeight.Normal
+                )
             }
-            Spacer(modifier = Modifier.weight(1f))
-            Box(
+            TextButton(
+                onClick = { showAntes = false },
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(Color.White.copy(alpha = 0.9f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (!showAntes) Color.White
+                        else darkSurface
+                    )
             ) {
-                Text("Después", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    "Después",
+                    color = if (!showAntes) Color.Black else Color.White,
+                    fontWeight = if (!showAntes) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
-        // Draggable handle: 48.dp circle, two vertical lines inside
         Box(
             modifier = Modifier
-                .fillMaxHeight()
-                .width(48.dp)
-                .offset {
-                    val halfHandle = with(density) { 24.dp.roundToPx() }
-                    IntOffset((widthPx * sliderPosition - halfHandle).roundToInt(), 0)
-                }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures { _, dragAmount ->
-                        if (widthPx > 0) {
-                            val newPos = (sliderPosition + dragAmount / widthPx).coerceIn(0.1f, 0.9f)
-                            sliderPosition = newPos
-                        }
-                    }
-                },
-            contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .clip(RoundedCornerShape(24.dp))
+                .background(darkSurface)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Color.White),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(TextSecondary))
-                    Box(modifier = Modifier.width(1.dp).height(16.dp).background(TextSecondary))
-                }
-            }
+            AsyncImage(
+                model = if (showAntes) beforeImageUrl else afterImageUrl,
+                contentDescription = if (showAntes) "Antes" else "Después",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
         }
-    }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = loadStatusText,
-            style = MaterialTheme.typography.labelSmall,
-            color = loadStatusColor
-        )
     }
 }
 
@@ -549,9 +395,9 @@ private fun SharePreviewDialog(
         },
         confirmButton = {
             TextButton(onClick = onShare) {
-                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = RoyalBlue)
+                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = AccentBlue)
                 Spacer(modifier = Modifier.size(4.dp))
-                Text("Compartir", color = RoyalBlue)
+                Text("Compartir", color = AccentBlue)
             }
         },
         dismissButton = {

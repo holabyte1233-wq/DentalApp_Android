@@ -18,9 +18,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -45,7 +45,7 @@ import coil.compose.AsyncImage
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.smile.SaveDesignState
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.smile.SmileDesignViewModel
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.smile.SmileUiState
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.SystemGray6
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +102,7 @@ fun SmileDesignScreen(
                         showSaveConfirmDialog = false
                     }
                 ) {
-                    Text("Confirmar", color = RoyalBlue)
+                    Text("Confirmar", color = AccentBlue)
                 }
             },
             dismissButton = {
@@ -124,7 +124,7 @@ fun SmileDesignScreen(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
-                            tint = RoyalBlue
+                            tint = AccentBlue
                         )
                     }
                 },

@@ -21,7 +21,9 @@ val mockPatients = listOf(
                 date = "2026-01-15",
                 status = "Completado",
                 notes = "Tratamiento de 3 sesiones, resultados excelentes",
-                colorIndicator = 0xFF34C759
+                colorIndicator = 0xFF34C759,
+                beforeImageUrl = "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=400",
+                afterImageUrl = "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=400"
             ),
             TreatmentRecord(
                 id = "t2",

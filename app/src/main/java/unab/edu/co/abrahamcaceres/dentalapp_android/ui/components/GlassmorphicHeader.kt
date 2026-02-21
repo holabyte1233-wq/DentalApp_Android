@@ -16,8 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.AccentBlue
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.BorderLight
-import unab.edu.co.abrahamcaceres.dentalapp_android.ui.theme.RoyalBlue
 
 @Composable
 fun GlassmorphicHeader(
@@ -29,7 +29,7 @@ fun GlassmorphicHeader(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .background(Color.White.copy(alpha = 0.92f))
+            .background(Color.White.copy(alpha = 0.7f))
     ) {
         Row(
             modifier = Modifier
@@ -49,7 +49,7 @@ fun GlassmorphicHeader(
                 ) {
                     Text(
                         text = "Salir",
-                        color = RoyalBlue,
+                        color = AccentBlue,
                         style = MaterialTheme.typography.labelLarge
                     )
                 }

@@ -21,6 +21,7 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation.Simu
 import unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation.SimulationState
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.DashboardScreen
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.LoginScreen
+import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.SettingsScreen
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.NuevaSimulacionScreen
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.PatientDetailsScreen
 import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.ProcessingScreen
@@ -29,6 +30,7 @@ import unab.edu.co.abrahamcaceres.dentalapp_android.ui.screens.ResultScreen
 sealed class Screen(val route: String) {
     data object Login : Screen("login")
     data object Dashboard : Screen("dashboard")
+    data object Settings : Screen("settings")
     data object PatientDetails : Screen("patient/{patientId}") {
         fun create(patientId: String) = "patient/$patientId"
     }
@@ -73,6 +75,19 @@ fun AppNavigation(
                 },
                 onNewDesign = {
                     navController.navigate(Screen.SimulationFlow.route)
+                },
+                onSettingsClick = {
+                    navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Dashboard.route) { inclusive = true }
+                    }
                 }
             )
         }
@@ -104,12 +119,10 @@ fun AppNavigation(
                 val sharedVm: SimulationSharedViewModel = hiltViewModel(parentEntry)
 
                 NuevaSimulacionScreen(
-                    isGeminiActive = sharedVm.isGeminiActive,
                     onCancel = { navController.popBackStack(Screen.SimulationFlow.route, true) },
-                    onStartProcessing = { name, age, photoUri, manualDesc ->
+                    onStartProcessing = { name, age, photoUri ->
                         sharedVm.setPatientData(name, age)
                         sharedVm.setPhoto(photoUri)
-                        sharedVm.setManualDescription(manualDesc)
                         sharedVm.startProcessing()
                         navController.navigate(Screen.Processing.route)
                     }

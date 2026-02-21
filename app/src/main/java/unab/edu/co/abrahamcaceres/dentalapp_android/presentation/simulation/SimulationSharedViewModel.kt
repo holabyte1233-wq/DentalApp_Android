@@ -61,9 +61,6 @@ class SimulationSharedViewModel @Inject constructor(
         private set
     var photoUri: Uri? = null
         private set
-    var manualDescription: String = ""
-        private set
-
     fun setPatientData(name: String, age: String) {
         patientName = name
         patientAge = age
@@ -71,10 +68,6 @@ class SimulationSharedViewModel @Inject constructor(
 
     fun setPhoto(uri: Uri?) {
         photoUri = uri
-    }
-
-    fun setManualDescription(description: String) {
-        manualDescription = description
     }
 
     fun startProcessing() {
@@ -92,10 +85,7 @@ class SimulationSharedViewModel @Inject constructor(
                     } ?: throw IllegalStateException("No se pudo leer la imagen")
                 }
 
-                val description = when {
-                    !isGeminiActive && manualDescription.isNotBlank() -> manualDescription
-                    else -> smileAnalyzer.analyzeSmile(bitmap)
-                }
+                val description = smileAnalyzer.analyzeSmile(bitmap)
 
                 val photoBytes = withContext(Dispatchers.Default) {
                     val out = ByteArrayOutputStream()
@@ -202,7 +192,6 @@ class SimulationSharedViewModel @Inject constructor(
         patientName = ""
         patientAge = ""
         photoUri = null
-        manualDescription = ""
     }
 
 }
