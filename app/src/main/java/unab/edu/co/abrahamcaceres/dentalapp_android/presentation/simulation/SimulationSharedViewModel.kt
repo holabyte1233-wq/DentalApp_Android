@@ -3,6 +3,7 @@ package unab.edu.co.abrahamcaceres.dentalapp_android.presentation.simulation
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -10,7 +11,6 @@ import java.io.ByteArrayOutputStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Named
-import unab.edu.co.abrahamcaceres.dentalapp_android.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -85,7 +85,14 @@ class SimulationSharedViewModel @Inject constructor(
                     } ?: throw IllegalStateException("No se pudo leer la imagen")
                 }
 
-                val description = smileAnalyzer.analyzeSmile(bitmap)
+                val description = try {
+                    smileAnalyzer.analyzeSmile(bitmap)
+                } catch (e: Throwable) {
+                    _state.value = SimulationState.Error(
+                        e.message ?: "Error al procesar con IA. Revisa la conexión e intenta de nuevo."
+                    )
+                    return@launch
+                }
 
                 val photoBytes = withContext(Dispatchers.Default) {
                     val out = ByteArrayOutputStream()
@@ -97,16 +104,27 @@ class SimulationSharedViewModel @Inject constructor(
                 val beforeUrl = try {
                     smileRepository.uploadOriginalPhoto(photoBytes, patientId)
                 } catch (_: Exception) {
-                    uri.toString()
+                    // Fallback: save to cache so we have a reliable loadable URI
+                    try {
+                        java.io.File(appContext.cacheDir, "camera_photos").mkdirs()
+                        val cacheFile = java.io.File(appContext.cacheDir, "camera_photos/sim_$patientId.jpg")
+                        cacheFile.writeBytes(photoBytes)
+                        FileProvider.getUriForFile(
+                            appContext,
+                            "${appContext.packageName}.fileprovider",
+                            cacheFile
+                        ).toString()
+                    } catch (_: Exception) {
+                        uri.toString()
+                    }
                 }
 
-                // Demo: con Gemini activo solo hay descripción IA, no cambio de imagen.
-                // En modo Mock usamos una imagen de ejemplo para un slider Antes/Después visual.
+                // Con Gemini: misma imagen antes/después (IA solo aporta texto).
+                // Modo Mock: imagen de ejemplo para slider visual.
                 val afterUrl = if (isGeminiActive) {
-                    beforeUrl  // misma imagen; la IA solo aporta texto
+                    beforeUrl
                 } else {
-                    val resName = appContext.resources.getResourceEntryName(R.drawable.ic_sample_dental_after)
-                    "android.resource://${appContext.packageName}/drawable/$resName"
+                    "android.resource://${appContext.packageName}/drawable/ic_sample_dental_after"
                 }
 
                 val result = SimulationResult(

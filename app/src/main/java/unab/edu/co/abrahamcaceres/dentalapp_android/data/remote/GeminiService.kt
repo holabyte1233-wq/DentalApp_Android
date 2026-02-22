@@ -14,7 +14,14 @@ class GeminiService @Inject constructor(
     override suspend fun analyzeSmile(originalBitmap: Bitmap): String = generateSmile(originalBitmap)
 
     suspend fun generateSmile(originalBitmap: Bitmap): String = withContext(Dispatchers.IO) {
-        val prompt = "Actúa como un odontólogo estético experto. Analiza la imagen dental proporcionada. Genera una imagen nueva aplicando carillas de porcelana, corrigiendo alineación y blanqueando a tono B1, manteniendo la naturalidad de la encía. Retorna solo la imagen generada"
+        val prompt = """
+            Actúa como un odontólogo estético experto. Analiza la imagen dental proporcionada.
+            Describe de forma clara y profesional:
+            1. Estado actual de la sonrisa (alineación, color, posibles mejoras)
+            2. Tratamiento recomendado (ej: blanqueamiento, carillas, ortodoncia)
+            3. Resultado esperado tras el tratamiento
+            Responde en español, de forma concisa (2-4 párrafos).
+        """.trimIndent()
 
         val inputContent = content {
             image(originalBitmap)

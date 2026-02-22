@@ -1,22 +1,27 @@
 package unab.edu.co.abrahamcaceres.dentalapp_android.di
 
-import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Named
 import javax.inject.Singleton
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.MockSmileAnalyzer
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.SmileAnalyzer
+import unab.edu.co.abrahamcaceres.dentalapp_android.data.remote.GeminiService
 
 /**
- * Binds MockSmileAnalyzer as SmileAnalyzer so the app works without GEMINI_API_KEY.
- * No GenerativeModel is created - avoids crashes when navigating to New Design.
+ * Provides SmileAnalyzer: GeminiService when GEMINI_API_KEY is configured, MockSmileAnalyzer otherwise.
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class SmileAnalyzerModule {
+object SmileAnalyzerModule {
 
-    @Binds
+    @Provides
     @Singleton
-    abstract fun bindSmileAnalyzer(impl: MockSmileAnalyzer): SmileAnalyzer
+    fun provideSmileAnalyzer(
+        mock: MockSmileAnalyzer,
+        gemini: GeminiService,
+        @Named("gemini_active") isGeminiActive: Boolean
+    ): SmileAnalyzer = if (isGeminiActive) gemini else mock
 }

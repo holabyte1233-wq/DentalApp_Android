@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -35,7 +36,8 @@ fun GlassmorphicHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = title,
@@ -43,10 +45,7 @@ fun GlassmorphicHeader(
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (onLogout != null) {
-                TextButton(
-                    onClick = onLogout,
-                    modifier = Modifier.padding(start = 8.dp)
-                ) {
+                TextButton(onClick = onLogout) {
                     Text(
                         text = "Salir",
                         color = AccentBlue,

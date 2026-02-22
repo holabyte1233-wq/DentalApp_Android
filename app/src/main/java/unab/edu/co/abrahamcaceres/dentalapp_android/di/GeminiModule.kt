@@ -20,7 +20,8 @@ object GeminiModule {
         val key = BuildConfig.GEMINI_API_KEY
         return key.isNotBlank() &&
             !key.contains("pega-tu-clave", ignoreCase = true) &&
-            !key.contains("your-api-key", ignoreCase = true)
+            !key.contains("your-api-key", ignoreCase = true) &&
+            !key.contains("placeholder", ignoreCase = true)
     }
 
     @Provides

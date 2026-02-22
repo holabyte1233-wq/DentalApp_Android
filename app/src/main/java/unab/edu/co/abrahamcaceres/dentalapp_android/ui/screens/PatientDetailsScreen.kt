@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -55,7 +54,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.Patient
 import unab.edu.co.abrahamcaceres.dentalapp_android.data.TreatmentRecord
@@ -255,6 +253,65 @@ fun PatientDetailsScreen(
                             onExportJpg = { url -> scope.launch { exportImageAsJpg(context, url) } },
                             onExportInfo = { shareText(context, it) }
                         )
+                    }
+
+                    // Export section - always visible
+                    val latestAfterImage = patient.treatments
+                        .firstOrNull { !it.afterImageUrl.isNullOrBlank() }
+                        ?.afterImageUrl
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Exportar",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = {
+                                latestAfterImage?.let { url ->
+                                    scope.launch { exportImageAsJpg(context, url) }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            enabled = latestAfterImage != null,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp), tint = AccentBlue)
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "Imagen JPG",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (latestAfterImage != null) AccentBlue else TextSecondary
+                            )
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = {
+                                val report = buildString {
+                                    append("Paciente: ${patient.name}\n")
+                                    append("Última visita: ${patient.lastVisit}\n\n")
+                                    patient.treatments.forEach { t ->
+                                        append("Tratamiento: ${t.treatment}\n")
+                                        append("Fecha: ${t.date} | Estado: ${t.status}\n")
+                                        append("Notas: ${t.notes}\n\n")
+                                    }
+                                }
+                                shareText(context, report)
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp), tint = AccentBlue)
+                            Spacer(modifier = Modifier.size(6.dp))
+                            Text(
+                                text = "Informe",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = AccentBlue
+                            )
+                        }
                     }
                 }
 

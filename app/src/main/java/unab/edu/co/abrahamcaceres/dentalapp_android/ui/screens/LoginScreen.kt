@@ -5,6 +5,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -248,6 +250,7 @@ fun LoginScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .background(SystemGray6)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -475,7 +478,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = if (isRegisterMode) "¿Ya tienes cuenta? Inicia Sesión" else "¿No tienes cuenta? Regístrate",
@@ -485,11 +488,11 @@ fun LoginScreen(
                     isRegisterMode = !isRegisterMode
                     viewModel.clearError()
                 },
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
             color = AccentBlue
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Column(
             modifier = Modifier
@@ -532,7 +535,8 @@ private fun ScaleButton(
         shape = RoundedCornerShape(24.dp),
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = Color.Black,
-            disabledContainerColor = Color.Black.copy(alpha = 0.5f)
+            disabledContainerColor = Color.Gray.copy(alpha = 0.6f),
+            disabledContentColor = Color.White.copy(alpha = 0.8f)
         ),
         content = {
             if (isLoading) {
